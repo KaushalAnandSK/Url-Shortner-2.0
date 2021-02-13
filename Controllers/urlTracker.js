@@ -1,57 +1,65 @@
 const Tracker=require('../models/urlTracker');
-const shortUrl =require('../models/ShortUrl');
 
-function getIpAddress (req, uniqueTrack){
-    var ipAddress;
-    var forwardedIpsStr = req.headers['x-forwarded-for']; 
+async function getTracker (req,res){
+    const UserID = req.url.payload.url.UserID;
+    const shortUrl = req.url.payload.url.shortUrl;
+    const clicks = req.url.payload.url.clicks;
+    const IP_Address = req.url.payload.url.IP_Address;
+    const User_Agent = req.url.payload.url.User_Agent;
+    console.log("UserID   --- > ",UserID)
 
-    if (forwardedIpsStr) {
-      var forwardedIps = forwardedIpsStr.split(',');
-      ipAddress = forwardedIps[0];
-    }
-    if (!ipAddress) {
-      // If request was not forwarded
-      ipAddress = req.connection.remoteAddress;
-    }
-    return ipAddress;
- }
-
-async function getRoute (req,res){
-    const { longUrl , createdOn } = req.body;
-    // let page=req.query.page;
-    // let limit =req.query.limit;
     try{
-        const uniqueTrack = await shortUrl.find({longUrl, createdOn});
-        var urlIp = getIpAddress(req, uniqueTrack);
-        var urlUserAgent = req.get('user-agent');
-        var url = new shortUrl({
-            longUrl
+        let createOBj = {UserID, shortUrl, clicks, IP_Address, User_Agent};
+        const track = await Tracker.create(createOBj);
 
-        });
-        var result ={
-            url,
-            urlIp,
-            urlUserAgent,
-            createdOn,
-            longUrl
+        if(track){
+            res.json(track)
+        }else{
+            tracking = new track({
+                UserID ,
+                shortUrl,
+                clicks,
+                IP_Address, 
+                User_Agent
+            });
+
+            console.log("tracking --- >",tracking);
+            res.json(tracking);
         }
-        res.json(result);
-    }catch (err){
-        console.log(err);
-        res.json({ message : err});  
-    } 
-};
+    }catch (err) {
+        res.json({ message : err});
+    }
+    
+};  
 
-async function getUniqueRoute (req,res) {
+async function getUniqueTrack (req,res) {
+
+    const UserID = req.url.payload.userId;
+    const shortUrl = req.url.payload.shortUrl;
+    const clicks = req.url.payload.clicks;
+    const IP_Address = req.url.payload.IP_Address;
+    const User_Agent = req.url.payload.User_Agent;
+
     try{
-        const uniqueTrack = await Tracker.findById(req.params.urlId);
-        res.json(uniqueTrack)
-    }catch (err){
-        res.json({ message : err});  
+        const track = await Tracker.findById(req.params.trackingId);
+
+        tracking = new track({
+            UserID,
+            shortUrl,
+            clicks,
+            IP_Address, 
+            User_Agent
+        });
+
+        console.log(tracking);
+        res.json(tracking);
+    }catch (err) {
+        res.json( {message : err});
     }
 }
 
-module.exports = {
-    getRoute : getRoute,
-    getUniqueRoute : getUniqueRoute
-}
+module.exports={
+    getTracker : getTracker,
+    getUniqueTrack : getUniqueTrack
+}    
+

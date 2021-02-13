@@ -1,13 +1,15 @@
+const {roles} = require('../Helpers/roles');
 const User=require('../models/User');
 const Validation=require('../Helpers/validate');
 const jwt = require('jsonwebtoken');
 const passportSetUp = require('../config/passport-setup');
-
+const bcrypt = require('bcrypt');
 
 require('dotenv').config();
 
 //Secret
 var secretKey=process.env.SECRET_KET;
+
 
 //handle errors
 const handleErrors = (err) => {
@@ -22,10 +24,11 @@ const handleErrors = (err) => {
     //incorrect password
     if(err.message === 'Incorrect Password'){
         errors.password = "That Password is not registered";
+        return errors;
     }
 
     //duplicate error code
-    if(err.code ===1100){
+    if(err.code ===11000){
         errors.email ='that email is already registered';
     }
 
@@ -38,41 +41,83 @@ const handleErrors = (err) => {
     return errors;
 }
 
-//Creating Token
-const maxToken = 3*24*60*60;
-const createToken = (id) => {
-    return jwt.sign({ id }, secretKey , {expiresIn: maxToken});
+//Creating Token.
+const createToken = (user) => {
+    const maxToken = 3*24*60*60;
+    console.log("UserTest -- > ",user);
+    let userObj = {
+        "userId":user["_id"],
+        "user":user
+    }
+    console.log("userObj --- > ",userObj);
+  return jwt.sign(userObj, secretKey , {expiresIn: maxToken});
+}
+
+//Verify token. 
+async function verifyToken (req, res, next) {
+    const bearerHeader = req.headers.authorization;
+    let bearerToken;
+    if(typeof bearerHeader != 'undefined'){
+        const bearer =bearerHeader.split(' ');
+        bearerToken =bearer[1];      
+        jwt.verify(bearerToken, secretKey, (err, authData) => {
+            if(err){
+                res.status(403).json({message : "You need to be logged in to access this route"});
+            }else
+                req.user = jwt.decode(bearerToken, {complete: true});
+                next();
+        });
+    }else{
+        res.status(403).json({message : 'Forbidden'});
+    };
+};
+
+//Validating Roles.
+let grantAccess = function(action, resource) {
+ return async (req, res, next) => {
+  try {
+      console.log("req.user -- >",req.user.payload);
+   const permission = roles.can(req.user.payload.user.role)[action](resource);
+   console.log("permission  -- >", permission);
+   
+   if (!permission.granted) {
+       console.log("resource -- > ", resource);
+    return res.status(401).json({
+     error: "You don't have enough permission to perform this action"
+    });
+   }
+   next()
+  } catch (error) {
+   next(error)
+  }
+ }
 }
 
 //Function to register an given user details 
 
 async function registerUser (req,res) {
-    const {fName,lName, email, password} =req.body;
-    // let page=req.query.page;
-    // let limit =req.query.limit;
+    const {fName,lName, email, password, role} =req.body;
+    
     try{
-        const user = await User.create({fName, lName, email, password});
-        const token = createToken(user._id);
-        console.log(token);
+        const userObj = {fName, lName, email, password, role : role || 'User'};
+        const user = await User.create(userObj);
+                    console.log(user);
                     let result = {
                         status : "success",
                         data: {
-                            token : token,
                             user : user
                         }
                     }
-                    res.status(201).send(result);
         res.status(200).json(result);
     }catch (err){
         const errors = handleErrors(err);
-        res.status(400).json({ errors });
+        await res.status(400).json({ errors });
     }
 };
 
 async function getRegisteredUser (req,res) {
     try{
-        const registeredUser = await User.find();
-        res.json(registeredUser);
+         res.json(res.paginationResults);
     }catch (err) {
         res.json({ message : err});
     }
@@ -109,44 +154,52 @@ async function removeUserById (req,res) {
         const removeUser = await User.remove({_id: req.params.userId});
         res.json(removeUser);
     }catch (err) {
+        console.log(err);
         res.json({ message : err});
     }
 };
 
 // Login method for user.
 async function login (req,res) {
-
-    let email = req.body.email;
-    let password = req.body.password;
-    
-    
+    console.log("Valid login -- >",login);
+    let {fName, lName, email, password, role} = req.body;
+    console.log("req.body -- >",req.body);
     // validate given inputs , check email and password. 
     try{
         if(!Validation.isValidEmail(email))
         {
+            console.log("Valid Email -- >",email);
             return res.status(400).json({errorCode:"10001",message:"Invalid email format, please try again."})
         } else if(!Validation.validatePassword(password)) {
+            console.log("Valid password -- >",password);
             return res.status(400).json({errorCode:"10002",message:"Invalid Password format, please try again"});
         }else {
-          const user = await User.login(email, password)
-          const token = createToken(user._id);
-          console.log(token);
-                      let data;
-                      let result = {
-                          status : "success",
-                          data: {
-                              token : token,
-                              userId : user._id
-                          }
-                      }
-                      res.status(201).send(result);
-                      res.status(200).json(result.token);        
-         }
-
+          const user = await User.findOne({email: email});
+          console.log("User --- >",user)
+            if(user){
+                console.log("Bcrypt password -- >",user.password);
+                console.log("user password -- >",password);
+                const auth = await bcrypt.compare(password, user.password);
+                console.log("Auth  -- >",auth);
+                if(auth) {
+                    const token = createToken(user);
+                    const result = {
+                        status : "success",
+                        data: {
+                            token : token,
+                            userId : user._id
+                        } 
+                    }
+                    res.status(200).json(result);
+                }else {
+                    res.status(400).json({ message : "Password incorrect"});
+                }
+            }
+            res.status(400).json({ message : "Email incorrect"});
+        }
     }catch (err) {
         const errors = handleErrors(err);
         console.log(errors);
-        res.status(400).json(errors);
     }
         // Check if email exists in db , 
         //    then check if email and password is matching in db 
@@ -160,11 +213,6 @@ async function login (req,res) {
         //          send response as email is not resgistered, please contact admin  status code as 400
 };
 
-// Function to Check status of the user
- async function profile(req,res){
-    console.log("Hello World");
- };
-
 module.exports = {
     registerUser : registerUser,
     getRegisteredUser : getRegisteredUser,
@@ -172,5 +220,7 @@ module.exports = {
     updateUserById : updateUserById,
     removeUserById : removeUserById,
     login : login,
-    profile : profile
+    grantAccess : grantAccess,
+    verifyToken : verifyToken,
+    createToken : createToken
 }

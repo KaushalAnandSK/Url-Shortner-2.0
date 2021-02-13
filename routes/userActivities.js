@@ -1,14 +1,13 @@
 const express=require('express');
 const router =express.Router();
 const userActivityController =require('../Controllers/userActivities');
+const { verifyAccessTokenForUrlId } =require('../Helpers/validate');
 
 //Get all the activities.
-router.get('/', userActivityController.getActivity);
+router.get('/', verifyAccessTokenForUrlId, userActivityController.getActivity);
 
 //Get unique activity.
-router.get('/:activityId', userActivityController.getUniqueActivities);
+router.get('/:activityId', verifyAccessTokenForUrlId, userActivityController.getUniqueActivity);
 
-//post activities.
-router.post('/post', userActivityController.postActivities);
 
 module.exports =router;
