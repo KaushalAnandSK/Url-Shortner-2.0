@@ -44,33 +44,12 @@ const handleErrors = (err) => {
 //Creating Token.
 const createToken = (user) => {
     const maxToken = 3*24*60*60;
-    console.log("UserTest -- > ",user);
     let userObj = {
         "userId":user["_id"],
         "user":user
     }
-    console.log("userObj --- > ",userObj);
   return jwt.sign(userObj, secretKey , {expiresIn: maxToken});
 }
-
-//Verify token. 
-async function verifyToken (req, res, next) {
-    const bearerHeader = req.headers.authorization;
-    let bearerToken;
-    if(typeof bearerHeader != 'undefined'){
-        const bearer =bearerHeader.split(' ');
-        bearerToken =bearer[1];      
-        jwt.verify(bearerToken, secretKey, (err, authData) => {
-            if(err){
-                res.status(403).json({message : "You need to be logged in to access this route"});
-            }else
-                req.user = jwt.decode(bearerToken, {complete: true});
-                next();
-        });
-    }else{
-        res.status(403).json({message : 'Forbidden'});
-    };
-};
 
 //Validating Roles.
 let grantAccess = function(action, resource) {
@@ -78,7 +57,6 @@ let grantAccess = function(action, resource) {
   try {
       console.log("req.user -- >",req.user.payload);
    const permission = roles.can(req.user.payload.user.role)[action](resource);
-   console.log("permission  -- >", permission);
    
    if (!permission.granted) {
        console.log("resource -- > ", resource);
@@ -105,7 +83,7 @@ async function registerUser (req,res) {
                     let result = {
                         status : "success",
                         data: {
-                            user : user
+                            message : "Registration is sucessfull"
                         }
                     }
         res.status(200).json(result);
@@ -133,15 +111,11 @@ async function getUserById (req,res) {
 };
 
 async function updateUserById (req,res) {
+    var user = req.body;
        try{
         const updateUser= await User.updateOne(
             {_id : req.params.userId},
-            { $set: { fName: req.body.fName,
-                      lName: req.body.lName, 
-                      email: req.body.email, 
-                      password: req.body.password, 
-                      confirmPassword: req.body.confirmPassword
-                    }}
+            {$set : user}
         );
         res.json(updateUser);
     }catch (err) {
@@ -161,9 +135,7 @@ async function removeUserById (req,res) {
 
 // Login method for user.
 async function login (req,res) {
-    console.log("Valid login -- >",login);
-    let {fName, lName, email, password, role} = req.body;
-    console.log("req.body -- >",req.body);
+    let { email, password } = req.body;
     // validate given inputs , check email and password. 
     try{
         if(!Validation.isValidEmail(email))
@@ -177,10 +149,7 @@ async function login (req,res) {
           const user = await User.findOne({email: email});
           console.log("User --- >",user)
             if(user){
-                console.log("Bcrypt password -- >",user.password);
-                console.log("user password -- >",password);
                 const auth = await bcrypt.compare(password, user.password);
-                console.log("Auth  -- >",auth);
                 if(auth) {
                     const token = createToken(user);
                     const result = {
@@ -221,6 +190,5 @@ module.exports = {
     removeUserById : removeUserById,
     login : login,
     grantAccess : grantAccess,
-    verifyToken : verifyToken,
     createToken : createToken
 }

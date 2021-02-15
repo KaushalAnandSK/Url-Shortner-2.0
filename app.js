@@ -31,23 +31,6 @@ app.use(cookieSession ({
   keys : [key.session.cookieKey]
 }));
 
-app.use(async (req, res, next) => {
-  if (req.headers["x-access-token"]) {
-   const accessToken = req.headers["x-access-token"];
-   const { userId, exp } = await jwt.verify(accessToken, process.env.JWT_SECRET);
-   // Check if token has expired
-   if (exp < Date.now().valueOf() / 1000) {
-    return res.status(401).json({
-     error: "JWT token has expired, please login to obtain a new one"
-    });
-   }
-   res.locals.loggedInUser = await User.findById(userId);
-   next();
-  } else {
-   next();
-  }
-});
-
 //Initalize password.
 app.use(passport.initialize());
 app.use(passport.session());
@@ -59,13 +42,13 @@ app.use('/user',userRoute);
 const shortUrlRoute=require('./routes/shortUrl');
 app.use('/shortUrl',shortUrlRoute);
 
-const urlTrackerRoute=require('./routes/UrlTracker');
-app.use('/urlTracker',urlTrackerRoute);
+// const urlTrackerRoute=require('./routes/UrlTracker');
+// app.use('/urlTracker',urlTrackerRoute);
 
-const useractivitiesRoute=require('./routes/userActivities');
-const { config } = require('dotenv/lib/main');
-const keys = require('./config/keys');
-app.use('/useractivities',useractivitiesRoute);
+// const useractivitiesRoute=require('./routes/userActivities');
+// const { config } = require('dotenv/lib/main');
+// const keys = require('./config/keys');
+// app.use('/useractivities',useractivitiesRoute);
 
 //ROUTES
 app.get('/', (req,res) => {

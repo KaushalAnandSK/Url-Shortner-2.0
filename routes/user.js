@@ -25,15 +25,15 @@ router.get('/google/redirect', passport.authenticate('google') , (req,res) => {
 router.post('/register', UserController.registerUser);
 
 //Getting all registered user.
-router.get('/register/list', verifyAccessTokenForUserId, UserController.verifyToken, UserController.grantAccess('readAny', 'profile'), paginationResults(User), UserController.getRegisteredUser);
+router.get('/all-user/list', verifyAccessTokenForUserId, UserController.grantAccess('readAny', 'profile'), paginationResults(User), UserController.getRegisteredUser);
 
 //Getting specific user.
-router.get('/:userId', verifyAccessTokenForUserId, UserController.getUserById);
+router.get('/user-by-id/:userId', verifyAccessTokenForUserId, UserController.getUserById);
 
 //updating user.
-router.put('/update/:userId', verifyAccessTokenForUserId, UserController.verifyToken, UserController.grantAccess('updateAny', 'profile'), UserController.updateUserById);
+router.put('/user-update/:userId', verifyAccessTokenForUserId, UserController.grantAccess('updateAny', 'profile'), UserController.updateUserById);
 
 //deleting specific post.
-router.delete('/remove/:userId', verifyAccessTokenForUserId, UserController.verifyToken, UserController.grantAccess('deleteAny', 'profile'), UserController.removeUserById);
+router.delete('/user-remove/:userId', verifyAccessTokenForUserId, UserController.grantAccess('deleteAny', 'profile'), UserController.removeUserById);
 
 module.exports =router;

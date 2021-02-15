@@ -14,11 +14,11 @@ async function createUrls (req,res){
     const baseUrl = config.get('baseURL');
     //clicks
     let clicks;
+    
+    let Password;
 
     //Importing USERID from users
     const UserID = req.user.payload.userId;
-    console.log("user_id --- >",req.user.payload.userId);
-
     
     //Array containing url-details.
     let url_tracker = {
@@ -39,7 +39,6 @@ async function createUrls (req,res){
 
     //Create url code.
     const urlCode = shortid.generate();
-    console.log(urlCode);
 
     //Getting complete shoertUrl.
     shortUrl = baseUrl + '/' + urlCode;
@@ -47,42 +46,39 @@ async function createUrls (req,res){
     //check long url.
     if(validUrl.isUri(longUrl)){
         try{
-            let createObj = {urlCode, longUrl, password, shortUrl, clicks, url_tracker, user_id : UserID, Action};
+            let createObj = {urlCode, longUrl, password : Password, shortUrl, clicks, url_tracker, user_id : UserID, Action};
 
             //Hashing Password if password exists.
             if(password == ""){
                 createObj.password = "";
             }else{
                 const salt = await bcrypt.genSalt(5);
-                let Password = await bcrypt.hash(password, salt);
+                Password = await bcrypt.hash(password, salt);
                 createObj.password = Password;
             }
            
             //Creating obj.
-            let result = await ShortUrl.findOne({createObj});
-            console.log("URRRRR",result);
-
-            if(result){
-                res.json(result);
-            }else {
+            let result = await ShortUrl.create(createObj);
+            console.log("Result  -- > ", result);
                  result = {
                     status : "success",
                     data: {
-                            longUrl : longUrl,
-                            shortUrl : shortUrl,
-                            urlCode : urlCode,
-                            clicks ,
-                            url_tracker: url_tracker,
-                            user_id : UserID,
-                            password : password,
-                            Action : Action
+                            // longUrl : longUrl,
+                            // shortUrl : shortUrl,
+                            // urlCode : urlCode,
+                            // clicks,
+                            // url_tracker: url_tracker,
+                            // user_id : UserID,
+                            // password : Password,
+                            // Action : Action,
+                            // timestamp :  result.timestamp
+                            message : " short url generated "
                         }
                     }           
                 res.status(200).json(result);               
-            }
         } catch (err){
             console.error(err);
-            res.status(500).json('server error');
+            res.status(500).json('Long url is already present');
         }
     } else {
         res.status(400).json('Invalid long url');
@@ -90,9 +86,9 @@ async function createUrls (req,res){
 }
 
 async function redirectToUrl (req, res) {
-    let { shortUrl, password } = req.body;
+    let { password } = req.body;
     const url = await ShortUrl.findOne({ urlCode : req.params.code });
-    var clickCount = url.clicks;
+    var clickCount;
 
     //Getting ip address
     var urlIp = getIpAddress(req, uniqueTrack);
@@ -110,33 +106,39 @@ async function redirectToUrl (req, res) {
              //Array containing url-details.
             let url_tracker = {
                 ip_address : urlIp,
-                user_agent : urlUserAgent
+                user_agent : urlUserAgent,
+                timestamp : url.timestamp
             };
 
             clickCount++;
-            await url.update({ url_tracker,  clickCount});
+            await url.updateOne({ url_tracker,  clickCount});
             console.log(url_tracker);
 
             return res.redirect(url.longUrl);
         } else {
-            if(clickCount >= config.allowedClick){
-                console.log("The click count for shortcode " + shortUrlCode + " has passed the limit of " + config.allowedClick);
-                return res.status(400).json("The click count for shortcode " + shortUrlCode + " has passed the limit of " + config.allowedClick);
+            const auth = await bcrypt.compare(password, url.password);
+            if(auth){
+                if(clickCount >= config.allowedClick){
+                    console.log("The click count for shortcode " + shortUrlCode + " has passed the limit of " + config.allowedClick);
+                    return res.status(400).json("The click count for shortcode " + shortUrlCode + " has passed the limit of " + config.allowedClick);
+                }
+                 //Array containing url-details.
+                 let url_tracker = {
+                    ip_address : urlIp,
+                    user_agent : urlUserAgent
+                };
+    
+                clickCount++;
+                await url.update({ url_tracker,  clickCount});
+                console.log(url_tracker);
+    
+                res.redirect(url.longUrl);
+            }else{
+                console.status(400).json({ message : "Password do not matched... "});
             }
-             //Array containing url-details.
-             let url_tracker = {
-                ip_address : urlIp,
-                user_agent : urlUserAgent
-            };
-
-            clickCount++;
-            await url.update({ url_tracker,  clickCount});
-            console.log(url_tracker);
-
-            res.redirect(url.longUrl);
-        }
+        }    
       }else{
-        res.status(400).json({ message : "Url don't match with password"});
+        res.status(400).json({ message : "Url don't match with record"});
     }  
 }
 
@@ -158,10 +160,13 @@ async function getAllRoute (req, res) {
 };    
 
 async function updateUrl (req,res){
+    var url =req.body;
+    console.log("req.body  --- >",req.body);
+
     try{
-        const updateUrl = await ShortUrl.findById(
-            {_id : req.params.userId},
-            { $set: { longUrl: req.body.longUrl } }
+        const updateUrl = await ShortUrl.updateOne(
+            {_id : req.params.urlId},
+            { $set: url }
         );
         res.json(updateUrl);
     }catch (err) {
@@ -171,7 +176,7 @@ async function updateUrl (req,res){
 
 async function removeUrl (req,res){
     try{
-        const removeUrl = await ShortUrl.remove({_id: req.params.urlId});
+        const removeUrl = await ShortUrl.remove({_id : req.params.urlId});
         res.json(removeUrl);
     }catch (err) {
         res.json({ message : err});

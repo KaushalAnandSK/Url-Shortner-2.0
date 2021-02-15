@@ -1,5 +1,4 @@
 const mongoose=require('mongoose');
-var uniqueValidator = require('mongoose-unique-validator');
 
 const shortUrlSchema=new mongoose.Schema({
     
@@ -33,8 +32,8 @@ const shortUrlSchema=new mongoose.Schema({
     }],
 
     clicks: { 
-        default : 0,
-        type : Number
+        type : Number,
+        default : 0
         },
 
     user_id: { 
@@ -49,7 +48,10 @@ const shortUrlSchema=new mongoose.Schema({
 
 });
 
-shortUrlSchema.plugin(uniqueValidator); 
+shortUrlSchema.path('longUrl').validate(async (longUrl) => {
+    const urlCodeCount = await mongoose.models.ShortUrl.countDocuments({ longUrl })
+        return !urlCodeCount 
+}, 'This long url already exists');
 
 module.exports = mongoose.model('ShortUrl',shortUrlSchema);
 

@@ -29,6 +29,7 @@
 
         try {
             results.results = await model.find().limit(limit).skip(startIndex).exec();
+            console.log("results.results -- > ",results.results);
             res.paginationResults = results;
             console.log("res.pagination ---- >   ",res.paginationResults);
             next();  
