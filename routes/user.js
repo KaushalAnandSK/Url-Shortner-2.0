@@ -29,6 +29,12 @@ router.post('/register', UserController.registerUser);
 //Getting dashboad
 router.get('/dashboard', verifyAccessTokenForUserId, UserController.dashboad);
 
+//Get log by Id
+router.get('/get-log/:logId', verifyAccessTokenForUserId, UserController.logDetails);
+
+//Get All logs
+router.get('/get-all-log', verifyAccessTokenForUserId, UserController.logAllDetails);
+
 //Change password
 router.post('/update-password', verifyAccessTokenForUserId, UserController.updatePassword);
 

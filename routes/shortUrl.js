@@ -17,9 +17,6 @@ router.get('/get-url/:urlId', verifyAccessTokenForUserId, shortUrlController.get
 //Get all the routes.
 router.get('/all-url', verifyAccessTokenForUserId, paginationResults(ShortUrl), shortUrlController.getAllRoute);
 
-//Getting specific url detail.
-router.put('/modify/:urlId', verifyAccessTokenForUserId, shortUrlController.updateUrl);
-
 //Remove Url.
 router.delete('/remove-url/:urlId', verifyAccessTokenForUserId, shortUrlController.removeUrl);
 

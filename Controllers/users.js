@@ -7,6 +7,7 @@ const bcrypt = require('bcrypt');
 const Log =require('../models/log');
 const shoertUrl =require('../models/ShortUrl');
 const ShortUrl = require('../models/ShortUrl');
+const { Passport } = require('passport');
 
 require('dotenv').config();
 
@@ -57,21 +58,21 @@ const createToken = (user) => {
 //Validating Roles.
 let grantAccess = function(action, resource) {
  return async (req, res, next) => {
-  try {
-      console.log("req.user -- >",req.user.payload);
-   const permission = roles.can(req.user.payload.user.role)[action](resource);
-   
-   if (!permission.granted) {
-       console.log("resource -- > ", resource);
-    return res.status(401).json({
-     error: "You don't have enough permission to perform this action"
-    });
-   }
-   next()
-  } catch (error) {
-   next(error)
-  }
- }
+        try {
+            console.log("req.user -- >",req.user.payload);
+        const permission = roles.can(req.user.payload.user.role)[action](resource);
+        
+        if (!permission.granted) {
+            console.log("resource -- > ", resource);
+            return res.status(401).json({
+            error: "You don't have enough permission to perform this action"
+            });
+        }
+        next()
+        } catch (error) {
+        next(error)
+        }
+    }
 }
 
 //Function to register an given user details 
@@ -108,7 +109,7 @@ async function getRegisteredUser (req,res) {
 
 async function getUserById (req,res) {
     try{
-        const uniqueUser = await User.findById(req.params.userId);
+        const uniqueUser = await User.findOne({ _id : req.params.userId});
         console.log("uni", req.params.userId);
         console.log("unique  -- > ",uniqueUser);
         res.json(uniqueUser);
@@ -157,7 +158,9 @@ async function logout (req,res) {
 
 async function logDetails (req,res) {
     try {
-        let logDetails = await Log.findById();
+        let logDetails = await Log.findOne({ UserID : req.params.logId});
+        console.log("req.params.logId --- > ",req.params.logId);
+        console.log("logDetails ---- > ",logDetails);
         res.status(200).json(logDetails);
     } catch (error) {
         res.status(400).json({ message : "The given log details are not available."});
@@ -166,7 +169,8 @@ async function logDetails (req,res) {
 
 async function logAllDetails (req,res) {
     try {
-        res.json(res.paginationResults);
+        let logDetails = await Log.find().sort({created_at: -1});
+        res.status(200).json(logDetails);
     } catch (error) {
         res.status(400).json({ message : "request cannot be completed"});
     }
@@ -206,8 +210,9 @@ async function login (req,res) {
                 }else {
                     res.status(400).json({ message : "Password incorrect"});
                 }
+            }else{
+                res.status(400).json({ message : "Email incorrect"});
             }
-            res.status(400).json({ message : "Email incorrect"});
         }
     }catch (err) {
         const errors = handleErrors(err);
@@ -252,13 +257,35 @@ async function dashboad (req,res) {
 //Adding update password
 
 async function updatePassword (req, res){
+    let { Password, newPassword } = req.body;
+    let UserID = req.user.payload.userId;
 
+    try {
+            let users = await User.findOne({_id : UserID});
+            const auth = await bcrypt.compare(Password, users.password);
+            console.log("auth ---- > ",auth);
+            if(auth){
+                if( Password != newPassword){
+                    const salt = await bcrypt.genSalt(5);
+                    newPassword = await bcrypt.hash(newPassword, salt);
+                    await users.updateOne({ password : newPassword});
+                    console.log("users.password --- >", users.password);
+                    res.status(200).json({ message : "Sucessfully Changed the password"}); 
+                }else{
+                    res.status(400).json({ message : "Please enter another password your new password matched with old one"});
+                }    
+            }else{
+                res.status(400).json({ message : "Password do not matched"});
+            }  
+        } catch (error) {
+            res.status(400).json({ message : "Please enter valid UserID"});
+    }
 }
 
 module.exports = {
     registerUser : registerUser,
     getRegisteredUser : getRegisteredUser,
-    getUserById : getUserById,
+    getUserById : getUserById,  
     updateUserById : updateUserById,
     removeUserById : removeUserById,
     login : login,

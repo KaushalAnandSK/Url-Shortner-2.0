@@ -46,43 +46,41 @@ async function createUrls (req,res){
     //check long url.
     if(validUrl.isUri(longUrl)){
         try{
-            let createObj = {urlCode, longUrl, password : Password, shortUrl, clicks, url_tracker, user_id : UserID, Action};
+            let longURL = await ShortUrl.findOne({ longUrl });
+            console.log("longURL --- > ",longURL);
+          //  console.log(" longUrl --- >",longUrl);
+            if(longURL == null && longURL != longUrl){
+                let createObj = {urlCode, longUrl, password : Password, shortUrl, clicks, url_tracker, user_id : UserID, Action};
 
-            //Hashing Password if password exists.
-            if(password == ""){
-                createObj.password = "";
-            }else{
-                const salt = await bcrypt.genSalt(5);
-                Password = await bcrypt.hash(password, salt);
-                createObj.password = Password;
-            }
-           
-            //Creating obj.
-            let result = await ShortUrl.create(createObj);
-            console.log("Result  -- > ", result);
-                 result = {
-                    status : "success",
-                    data: {
-                            // longUrl : longUrl,
-                            // shortUrl : shortUrl,
-                            // urlCode : urlCode,
-                            // clicks,
-                            // url_tracker: url_tracker,
-                            // user_id : UserID,
-                            // password : Password,
-                            // Action : Action,
-                            // timestamp :  result.timestamp
-                            message : " short url generated "
-                        }
-                    }           
-                res.status(200).json(result);               
-        } catch (err){
-            console.error(err);
-            res.status(500).json('Long url is already present');
-        }
-    } else {
-        res.status(400).json('Invalid long url');
-    }  
+                //Hashing Password if password exists.
+                if(password == "" && password == null){
+                    createObj.password = "";
+                }else{
+                    const salt = await bcrypt.genSalt(5);
+                    Password = await bcrypt.hash(password, salt);
+                    createObj.password = Password;
+                }
+            
+                    //Creating obj.
+                    let result = await ShortUrl.create(createObj);
+                    console.log("Result  -- > ", result);
+                        result = {
+                            status : "success",
+                            data: {
+                                    message : " short url generated "
+                                }
+                            }           
+                        res.status(200).json(result);    
+                        }else{
+                            res.status(500).json({ message : " longUrl already exists "});  
+                        }            
+                    } catch (error){
+                        console.error(error);
+                        res.status(500).json({ message : " Server error "});
+                    }
+            } else {
+                res.status(400).json('Invalid long url');
+            }  
 }
 
 async function redirectToUrl (req, res) {
@@ -98,11 +96,6 @@ async function redirectToUrl (req, res) {
 
     if(url){
         if (password == "") {
-            if(clickCount >= config.allowedClick){
-                console.log("The click count for shortcode " + shortUrlCode + " has passed the limit of " + config.allowedClick);
-                return res.status(400).json("The click count for shortcode " + shortUrlCode + " has passed the limit of " + config.allowedClick);
-            }
-
              //Array containing url-details.
             let url_tracker = {
                 ip_address : urlIp,
@@ -118,10 +111,6 @@ async function redirectToUrl (req, res) {
         } else {
             const auth = await bcrypt.compare(password, url.password);
             if(auth){
-                if(clickCount >= config.allowedClick){
-                    console.log("The click count for shortcode " + shortUrlCode + " has passed the limit of " + config.allowedClick);
-                    return res.status(400).json("The click count for shortcode " + shortUrlCode + " has passed the limit of " + config.allowedClick);
-                }
                  //Array containing url-details.
                  let url_tracker = {
                     ip_address : urlIp,
@@ -159,21 +148,6 @@ async function getAllRoute (req, res) {
     }
 };    
 
-async function updateUrl (req,res){
-    var url =req.body;
-    console.log("req.body  --- >",req.body);
-
-    try{
-        const updateUrl = await ShortUrl.updateOne(
-            {_id : req.params.urlId},
-            { $set: url }
-        );
-        res.json(updateUrl);
-    }catch (err) {
-        res.json({ message : err});
-    }
-};
-
 async function removeUrl (req,res){
     try{
         const removeUrl = await ShortUrl.remove({_id : req.params.urlId});
@@ -188,6 +162,5 @@ module.exports = {
     redirectToUrl : redirectToUrl,
     getUrl : getUrl,
     getAllRoute : getAllRoute,
-    updateUrl : updateUrl,
     removeUrl : removeUrl
 }

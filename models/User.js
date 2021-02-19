@@ -33,18 +33,6 @@ const userSchema=new mongoose.Schema({
          unique : true,
          sparse : true 
     },
-
-    total_clicks:
-    {
-        type : Number,
-        default : 0
-    },
-
-    clicks_in_day : {
-        type : Number,
-        default : 0
-    },
-
  },{timestamps : true}
  );
 
@@ -54,18 +42,5 @@ userSchema.pre('save', async function (next){
     this.password = await bcrypt.hash(this.password, salt);
     next();
 });
-
-// //static method to login user
-// userSchema.method.isValidPassword = async function(email, password){
-//     const user = await this.findOne({ email });
-//     if(user){
-//         const auth = await bcrypt.compare(password, user.password);
-//         if(auth) {
-//             return auth;
-//         }
-//         throw Error('Incorrect Password');
-//     }
-//     throw Error('Incorrect Email');
-// }
 
 module.exports = mongoose.model('user',userSchema);
