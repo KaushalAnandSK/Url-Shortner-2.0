@@ -43,10 +43,8 @@ const shortUrlSchema=new mongoose.Schema({
     token : {
         type : String
     },
-
-    timestamp: { type: Date, default: Date.now},
-
-});
+    
+}, {timestamps : true});
 
 shortUrlSchema.path('longUrl').validate(async (longUrl) => {
     const urlCodeCount = await mongoose.models.ShortUrl.countDocuments({ longUrl })

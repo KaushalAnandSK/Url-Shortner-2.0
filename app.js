@@ -9,7 +9,6 @@ const User = require('./models/User');
 const jwt = require('jsonwebtoken');
 const cors =require("cors");
 
-
 //INSTANCE of express
 const app=express();
 
@@ -41,14 +40,6 @@ app.use('/user',userRoute);
 
 const shortUrlRoute=require('./routes/shortUrl');
 app.use('/shortUrl',shortUrlRoute);
-
-// const urlTrackerRoute=require('./routes/UrlTracker');
-// app.use('/urlTracker',urlTrackerRoute);
-
-// const useractivitiesRoute=require('./routes/userActivities');
-// const { config } = require('dotenv/lib/main');
-// const keys = require('./config/keys');
-// app.use('/useractivities',useractivitiesRoute);
 
 //ROUTES
 app.get('/', (req,res) => {

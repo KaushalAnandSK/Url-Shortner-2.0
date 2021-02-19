@@ -87,7 +87,7 @@ async function createUrls (req,res){
 
 async function redirectToUrl (req, res) {
     let { password } = req.body;
-    const url = await ShortUrl.findOne({ urlCode : req.params.code });
+    const url = await ShortUrl.findOne({ _id : req.params.urlId});
     var clickCount;
 
     //Getting ip address
@@ -143,7 +143,7 @@ async function redirectToUrl (req, res) {
 }
 
 async function getUrl (req, res) {
-    const url = await ShortUrl.findOne( {urlCode : req.params.code});
+    const url = await ShortUrl.findOne( {_id : req.params.urlId});
     if(url){
         return res.status(200).json({ url });
     } else {

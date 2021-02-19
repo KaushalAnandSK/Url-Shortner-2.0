@@ -9,10 +9,10 @@ const { verifyAccessTokenForUserId } =require('../Helpers/validate')
 router.post('/url',verifyAccessTokenForUserId, shortUrlController.createUrls);
 
 //Redirect to url.
-router.get('/redirect-url/:code', verifyAccessTokenForUserId, shortUrlController.redirectToUrl);
+router.get('/redirect-url/:urlId', verifyAccessTokenForUserId, shortUrlController.redirectToUrl);
 
 //Get secure url data
-router.get('/get-url/:code', verifyAccessTokenForUserId, shortUrlController.getUrl);
+router.get('/get-url/:urlId', verifyAccessTokenForUserId, shortUrlController.getUrl);
 
 //Get all the routes.
 router.get('/all-url', verifyAccessTokenForUserId, paginationResults(ShortUrl), shortUrlController.getAllRoute);

@@ -21,8 +21,16 @@ router.get('/google/redirect', passport.authenticate('google') , (req,res) => {
     res.send('you reached the callback URL');
 });
 
+router.get('/logout', verifyAccessTokenForUserId, UserController.logout);
+
 //Submiting a user.
 router.post('/register', UserController.registerUser);
+
+//Getting dashboad
+router.get('/dashboard', verifyAccessTokenForUserId, UserController.dashboad);
+
+//Change password
+router.post('/update-password', verifyAccessTokenForUserId, UserController.updatePassword);
 
 //Getting all registered user.
 router.get('/all-user/list', verifyAccessTokenForUserId, UserController.grantAccess('readAny', 'profile'), paginationResults(User), UserController.getRegisteredUser);

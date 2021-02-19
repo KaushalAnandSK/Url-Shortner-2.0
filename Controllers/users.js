@@ -4,6 +4,9 @@ const Validation=require('../Helpers/validate');
 const jwt = require('jsonwebtoken');
 const passportSetUp = require('../config/passport-setup');
 const bcrypt = require('bcrypt');
+const Log =require('../models/log');
+const shoertUrl =require('../models/ShortUrl');
+const ShortUrl = require('../models/ShortUrl');
 
 require('dotenv').config();
 
@@ -75,10 +78,12 @@ let grantAccess = function(action, resource) {
 
 async function registerUser (req,res) {
     const {fName,lName, email, password, role} =req.body;
+    let total_clicks;
     
     try{
-        const userObj = {fName, lName, email, password, role : role || 'User'};
-        const user = await User.create(userObj);
+        let userObj = {fName, lName, email, password, total_clicks : total_clicks, role : role || 'User'};
+        let user = await User.create(userObj);
+        console.log(user);
                     console.log(user);
                     let result = {
                         status : "success",
@@ -104,7 +109,10 @@ async function getRegisteredUser (req,res) {
 async function getUserById (req,res) {
     try{
         const uniqueUser = await User.findById(req.params.userId);
+        console.log("uni", req.params.userId);
+        console.log("unique  -- > ",uniqueUser);
         res.json(uniqueUser);
+
     }catch (err) {
         res.json({ message : err});
     }
@@ -117,9 +125,10 @@ async function updateUserById (req,res) {
             {_id : req.params.userId},
             {$set : user}
         );
+        console.log("Update --- > ", updateUser);
         res.json(updateUser);
     }catch (err) {
-        res.json({ message : err});
+        res.json({ message : err });
     }
 };
 
@@ -133,9 +142,41 @@ async function removeUserById (req,res) {
     }
 };
 
+async function logout (req,res) {
+    let action = "Logout";
+    const UserID = req.user.payload.userId;
+    try {
+        let logs = await Log.create( {user_activities: [{Action: action}], UserID: UserID} );
+        console.log("logs --- > ",logs);
+        res.status(200).json(logs)
+    } catch (error) {
+        res.status(400).json({ message : "Logout failed.."});
+    }
+ 
+}
+
+async function logDetails (req,res) {
+    try {
+        let logDetails = await Log.findById();
+        res.status(200).json(logDetails);
+    } catch (error) {
+        res.status(400).json({ message : "The given log details are not available."});
+    }
+}
+
+async function logAllDetails (req,res) {
+    try {
+        res.json(res.paginationResults);
+    } catch (error) {
+        res.status(400).json({ message : "request cannot be completed"});
+    }
+}
+
 // Login method for user.
 async function login (req,res) {
     let { email, password } = req.body;
+    var action = "Login";
+    
     // validate given inputs , check email and password. 
     try{
         if(!Validation.isValidEmail(email))
@@ -146,8 +187,10 @@ async function login (req,res) {
             console.log("Valid password -- >",password);
             return res.status(400).json({errorCode:"10002",message:"Invalid Password format, please try again"});
         }else {
-          const user = await User.findOne({email: email});
-          console.log("User --- >",user)
+          let user = await User.findOne({email: email});
+          let user_ID = user && user._id;
+          
+         let logs = await Log.create({ user_activities: [{Action: action}], UserID: user_ID});
             if(user){
                 const auth = await bcrypt.compare(password, user.password);
                 if(auth) {
@@ -182,6 +225,36 @@ async function login (req,res) {
         //          send response as email is not resgistered, please contact admin  status code as 400
 };
 
+//Adding Dashboard
+
+async function dashboad (req,res) {
+ try {
+     let obj = {};
+     let totalUserRegistered = await User.count();
+     let totalUserRegisteredIn24Hr = await User.count( {"createdAt":{$gt:new Date(Date.now() - 24*60*60 * 1000)}} );
+     let totalUrlRegistered = await ShortUrl.count();
+     let totalUrlRegisteredIn24Hr = await ShortUrl.count( {"createdAt":{$gt:new Date(Date.now() - 24*60*60 * 1000)}} );
+     let recent10UrlGenerated = await ShortUrl.find().sort({created_at: -1}).limit(10);
+     let recent10UserACtivities = await Log.find().sort({created_at: -1}).limit(10);
+     obj['totalUserRegistered'] = totalUserRegistered;
+     obj['totalUserRegisteredIn24Hr'] = totalUserRegisteredIn24Hr;
+     obj['totalUrlRegistered'] = totalUrlRegistered;
+     obj['totalUrlRegisteredIn24Hr'] = totalUrlRegisteredIn24Hr;
+     obj['recent10UrlGenerated'] = recent10UrlGenerated;
+     obj['recent10UserACtivities'] = recent10UserACtivities;
+
+     res.status(200).json(obj);
+ } catch (error) {
+     res.status(400).json({ message : "The required log details in not available"});
+ }
+}
+
+//Adding update password
+
+async function updatePassword (req, res){
+
+}
+
 module.exports = {
     registerUser : registerUser,
     getRegisteredUser : getRegisteredUser,
@@ -190,5 +263,10 @@ module.exports = {
     removeUserById : removeUserById,
     login : login,
     grantAccess : grantAccess,
-    createToken : createToken
+    createToken : createToken,
+    logout : logout,
+    logDetails : logDetails,
+    logAllDetails : logAllDetails,
+    dashboad : dashboad,
+    updatePassword : updatePassword
 }

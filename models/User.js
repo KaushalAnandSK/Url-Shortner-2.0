@@ -5,7 +5,7 @@ const { isEmail }=require('validator');
 
 const userSchema=new mongoose.Schema({
     fName: {  
-             type: String, 
+             type : String, 
     },
 
     lName: {
@@ -23,16 +23,28 @@ const userSchema=new mongoose.Schema({
              minlength : [6, 'Minimum password length is 6 character']
     },
     role: {
-             type: String,
+             type : String,
              default: 'User',
              enum: ["User", "Admin"]
     },                               
     token: 
          {
-         type: String,
+         type : String,
          unique : true,
          sparse : true 
-    }
+    },
+
+    total_clicks:
+    {
+        type : Number,
+        default : 0
+    },
+
+    clicks_in_day : {
+        type : Number,
+        default : 0
+    },
+
  },{timestamps : true}
  );
 
