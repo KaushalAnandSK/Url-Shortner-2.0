@@ -149,7 +149,7 @@ async function logout (req,res) {
     try {
         let logs = await Log.create( {user_activities: [{Action: action}], UserID: UserID} );
         console.log("logs --- > ",logs);
-        res.status(200).json(logs)
+        res.status(200).json({ message : "Logout Sucessfull"});
     } catch (error) {
         res.status(400).json({ message : "Logout failed.."});
     }
@@ -158,7 +158,7 @@ async function logout (req,res) {
 
 async function logDetails (req,res) {
     try {
-        let logDetails = await Log.findOne({ UserID : req.params.logId});
+        let logDetails = await Log.find({ UserID : req.params.logId});
         console.log("req.params.logId --- > ",req.params.logId);
         console.log("logDetails ---- > ",logDetails);
         res.status(200).json(logDetails);
@@ -203,7 +203,8 @@ async function login (req,res) {
                         status : "success",
                         data: {
                             token : token,
-                            userId : user._id
+                            userId : user._id,
+                            role : user.role
                         } 
                     }
                     res.status(200).json(result);

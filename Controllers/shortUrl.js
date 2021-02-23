@@ -5,6 +5,8 @@ const config = require('config');
 const bcrypt = require('bcrypt');
 const { getIpAddress } = require('../Helpers/validate');
 const { uniqueTrack } = require('../Helpers/validate');
+const { findOneAndUpdate } = require('../models/ShortUrl');
+const mongoose=require('mongoose');
 
 //creating short URLs.
 async function createUrls (req,res){
@@ -48,6 +50,7 @@ async function createUrls (req,res){
         try{
             let longURL = await ShortUrl.findOne({ longUrl });
             console.log("longURL --- > ",longURL);
+            
           //  console.log(" longUrl --- >",longUrl);
             if(longURL == null && longURL != longUrl){
                 let createObj = {urlCode, longUrl, password : Password, shortUrl, clicks, url_tracker, user_id : UserID, Action};
@@ -63,6 +66,7 @@ async function createUrls (req,res){
             
                     //Creating obj.
                     let result = await ShortUrl.create(createObj);
+
                     console.log("Result  -- > ", result);
                         result = {
                             status : "success",
@@ -83,63 +87,79 @@ async function createUrls (req,res){
             }  
 }
 
+//Redirect Route.
 async function redirectToUrl (req, res) {
     let { password } = req.body;
     const url = await ShortUrl.findOne({ _id : req.params.urlId});
-    var clickCount;
 
     //Getting ip address
     var urlIp = getIpAddress(req, uniqueTrack);
+    console.log("urlIp - --- > ", urlIp);
         
     //Getting User Agent. 
     var urlUserAgent = req.get('user-agent');
 
     if(url){
-        if (password == "") {
-             //Array containing url-details.
-            let url_tracker = {
-                ip_address : urlIp,
-                user_agent : urlUserAgent,
-                timestamp : url.timestamp
-            };
+        try {
+            if (password == "") {
 
-            clickCount++;
-            await url.updateOne({ url_tracker,  clickCount});
-            console.log(url_tracker);
+                    //Getting _id from db.
+                    let objId =mongoose.Types.ObjectId(req.params.urlId);
+                    console.log("Obj -- > ",objId);
 
-            return res.redirect(url.longUrl);
-        } else {
-            const auth = await bcrypt.compare(password, url.password);
-            if(auth){
-                 //Array containing url-details.
-                 let url_tracker = {
-                    ip_address : urlIp,
-                    user_agent : urlUserAgent
-                };
-    
-                clickCount++;
-                await url.update({ url_tracker,  clickCount});
-                console.log(url_tracker);
-    
-                res.redirect(url.longUrl);
-            }else{
-                console.status(400).json({ message : "Password do not matched... "});
-            }
-        }    
+                    //Getting _id from array inside the db.
+                    let objId2 = await ShortUrl.find({"_id" : objId});
+                    objId2 = objId2[0].url_tracker[0]._id;
+                    console.log("objId2 --- > ",objId2);
+
+                    //Updating the totalclick,ip,user_agent.
+                    await ShortUrl.findOneAndUpdate({_id : objId, "url_tracker._id" : objId2}, { $inc : { "url_tracker.$.totalClick" : 1}, "url_tracker.$.ip_address" : urlIp, "url_tracker.$.user_agent" : urlUserAgent});
+                    
+                    //Redirect to longUrl.
+                    res.redirect(url.longUrl);
+            } else {
+                    const auth = await bcrypt.compare(password, url.password);
+                    if(auth){
+
+                        //Getting _id from db
+                        let objId =mongoose.Types.ObjectId(req.params.urlId);
+                        console.log("Obj -- > ",objId);
+                        
+                        //Getting _id from array inside the db
+                        let objId2 = await ShortUrl.find({"_id" : objId});
+                        objId2 = objId2[0].url_tracker[0]._id;
+                        
+                        //Updating the totalclick,ip,user_agent
+                        await ShortUrl.findOneAndUpdate({_id : objId, "url_tracker._id" : objId2},{ $inc : { "url_tracker.$.totalClick" : 1}, "url_tracker.$.ip_address" : urlIp, "url_tracker.$.user_agent" : urlUserAgent});
+                        
+                        //Redirect to longUrl.
+                        res.redirect(url.longUrl);
+                    }else{
+                        console.status(400).json({ message : "Password do not matched... "});
+                    }
+                }    
+        
+            }catch (error) {
+                console.log("error",error);
+            res.status(400).json( { message : "Cannot update database"});
+        }      
       }else{
         res.status(400).json({ message : "Url don't match with record"});
     }  
 }
 
+//Find Url details by _id.
 async function getUrl (req, res) {
-    const url = await ShortUrl.findOne( {_id : req.params.urlId});
-    if(url){
-        return res.status(200).json({ url });
-    } else {
-        return res.status(404).json('No url found');
+    try {
+        const url = await ShortUrl.findOne({_id : req.params.urlId});
+        console.log("Url  --- > ",url);
+        res.status(200).json(url)
+    } catch (error) {
+        res.status(error).json('No url found');
     }
 }
 
+//Find all Url details.
 async function getAllRoute (req, res) {
     try {
         res.json(res.paginationResults);
@@ -148,6 +168,7 @@ async function getAllRoute (req, res) {
     }
 };    
 
+//Remove Url by _id
 async function removeUrl (req,res){
     try{
         const removeUrl = await ShortUrl.remove({_id : req.params.urlId});

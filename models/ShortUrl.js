@@ -1,7 +1,7 @@
 const mongoose=require('mongoose');
 
+//Short Url Schema.
 const shortUrlSchema=new mongoose.Schema({
-    
     urlCode: { 
         type : String,
     },
@@ -27,14 +27,13 @@ const shortUrlSchema=new mongoose.Schema({
         user_agent : {
             type : String
         },
-        timestamp : { type: Date, default: Date.now},
+
+        totalClick: {
+            type : Number,
+            default : 0
+        }
 
     }],
-
-    clicks: { 
-        type : Number,
-        default : 0
-        },
 
     user_id: { 
             type : String
@@ -46,6 +45,7 @@ const shortUrlSchema=new mongoose.Schema({
     
 }, {timestamps : true});
 
+//Checking wheather Url exists!!
 shortUrlSchema.path('longUrl').validate(async (longUrl) => {
     const urlCodeCount = await mongoose.models.ShortUrl.countDocuments({ longUrl })
         return !urlCodeCount 
