@@ -4,9 +4,7 @@ const bodyParser=require('body-parser');
 const connectDB = require('./config/db');
 const cookieSession=require('cookie-session');
 const key =require('./config/keys');
-const passport=require('passport');
-const User = require('./models/User');
-const jwt = require('jsonwebtoken');
+const passport =require('passport');
 const cors =require("cors");
 
 //INSTANCE of express
@@ -24,7 +22,7 @@ app.use( bodyParser.json());
 //DB Connection.
 connectDB();
 
-//Set cookie session.
+//SET cookie session.
 app.use(cookieSession ({
   maxAge : 24*60*60*1000,
   keys : [key.session.cookieKey]

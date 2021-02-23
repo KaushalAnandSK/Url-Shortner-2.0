@@ -1,5 +1,6 @@
 const mongoose=require('mongoose');
 
+//Schema for OAuth.
 const oAuthSchema = new mongoose.Schema({
     username : {
         type : String

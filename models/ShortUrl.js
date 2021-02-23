@@ -42,8 +42,16 @@ const shortUrlSchema=new mongoose.Schema({
     token : {
         type : String
     },
+
+    date : { 
+        type : String
+    },
+
+    time : {
+        type :String
+    }
     
-}, {timestamps : true});
+} , { timestamps : true });
 
 //Checking wheather Url exists!!
 shortUrlSchema.path('longUrl').validate(async (longUrl) => {

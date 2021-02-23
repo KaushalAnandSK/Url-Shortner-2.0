@@ -1,13 +1,20 @@
 const mongoose=require('mongoose');
 
+//Schema for log.
 const logSchema = new mongoose.Schema({
     UserID : { type : String },
 
     user_activities : [
         {
             Action : { type : String },
-            timestamp: { type: Date, default: Date.now},
-           
+
+            date : { 
+                type : String
+            },
+        
+            time : {
+                type :String
+            }
         }
     ]
 });

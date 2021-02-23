@@ -2,21 +2,18 @@ const {roles} = require('../Helpers/roles');
 const User=require('../models/User');
 const Validation=require('../Helpers/validate');
 const jwt = require('jsonwebtoken');
-const passportSetUp = require('../config/passport-setup');
 const bcrypt = require('bcrypt');
 const Log =require('../models/log');
-const shoertUrl =require('../models/ShortUrl');
 const ShortUrl = require('../models/ShortUrl');
-const { Passport } = require('passport');
+
 
 require('dotenv').config();
 
-//Secret
-var secretKey=process.env.SECRET_KET;
+//Secret key.
+const secretKey=process.env.SECRET_KET;
 
-
-//handle errors
-const handleErrors = (err) => {
+//handling registration errors.
+let handleErrors = (err) => {
     console.log(err.message, err.code);
     let errors = {email : '', password : ''};
     
@@ -45,7 +42,7 @@ const handleErrors = (err) => {
     return errors;
 }
 
-//Creating Token.
+//Creating Token for jwt.
 const createToken = (user) => {
     const maxToken = 3*24*60*60;
     let userObj = {
@@ -59,11 +56,9 @@ const createToken = (user) => {
 let grantAccess = function(action, resource) {
  return async (req, res, next) => {
         try {
-            console.log("req.user -- >",req.user.payload);
-        const permission = roles.can(req.user.payload.user.role)[action](resource);
+        let permission = roles.can(req.user.payload.user.role)[action](resource);
         
         if (!permission.granted) {
-            console.log("resource -- > ", resource);
             return res.status(401).json({
             error: "You don't have enough permission to perform this action"
             });
@@ -75,17 +70,13 @@ let grantAccess = function(action, resource) {
     }
 }
 
-//Function to register an given user details 
-
+//Generating registration.
 async function registerUser (req,res) {
-    const {fName,lName, email, password, role} =req.body;
-    let total_clicks;
+    let {fName,lName, email, password, role} =req.body;
     
     try{
-        let userObj = {fName, lName, email, password, total_clicks : total_clicks, role : role || 'User'};
-        let user = await User.create(userObj);
-        console.log(user);
-                    console.log(user);
+        let userObj = {fName, lName, email, password, role : role || 'User'};
+        await User.create(userObj);
                     let result = {
                         status : "success",
                         data: {
@@ -94,48 +85,49 @@ async function registerUser (req,res) {
                     }
         res.status(200).json(result);
     }catch (err){
+        console.log(err);
         const errors = handleErrors(err);
         await res.status(400).json({ errors });
     }
 };
 
+//Get all registered user details.
 async function getRegisteredUser (req,res) {
     try{
-         res.json(res.paginationResults);
+        res.json(res.paginationResults);
     }catch (err) {
         res.json({ message : err});
     }
 };
 
+//Get all registered user by id.
 async function getUserById (req,res) {
     try{
-        const uniqueUser = await User.findOne({ _id : req.params.userId});
-        console.log("uni", req.params.userId);
-        console.log("unique  -- > ",uniqueUser);
+        let uniqueUser = await User.findOne({ _id : req.params.userId});
         res.json(uniqueUser);
-
     }catch (err) {
         res.json({ message : err});
     }
 };
 
+//Update user by id.
 async function updateUserById (req,res) {
-    var user = req.body;
+    let user = req.body;
        try{
-        const updateUser= await User.updateOne(
+        let updateUser= await User.updateOne(
             {_id : req.params.userId},
             {$set : user}
         );
-        console.log("Update --- > ", updateUser);
         res.json(updateUser);
     }catch (err) {
         res.json({ message : err });
     }
 };
 
+//Remove user by id.
 async function removeUserById (req,res) {
     try{
-        const removeUser = await User.remove({_id: req.params.userId});
+        let removeUser = await User.remove({_id: req.params.userId});
         res.json(removeUser);
     }catch (err) {
         console.log(err);
@@ -143,11 +135,18 @@ async function removeUserById (req,res) {
     }
 };
 
+
+//Logout route
 async function logout (req,res) {
+    //Current date and time.
+    let date = new Date().toLocaleDateString();
+    let time = new Date().toLocaleTimeString();
+
     let action = "Logout";
     const UserID = req.user.payload.userId;
     try {
-        let logs = await Log.create( {user_activities: [{Action: action}], UserID: UserID} );
+        let logs = await Log.create({ user_activities: [{"Action" : action, "date" : date, "time" : time}], UserID: UserID});  
+
         console.log("logs --- > ",logs);
         res.status(200).json({ message : "Logout Sucessfull"});
     } catch (error) {
@@ -156,17 +155,17 @@ async function logout (req,res) {
  
 }
 
+//Get log details by it. 
 async function logDetails (req,res) {
     try {
         let logDetails = await Log.find({ UserID : req.params.logId});
-        console.log("req.params.logId --- > ",req.params.logId);
-        console.log("logDetails ---- > ",logDetails);
         res.status(200).json(logDetails);
     } catch (error) {
         res.status(400).json({ message : "The given log details are not available."});
     }
 }
 
+//Get all the log details.
 async function logAllDetails (req,res) {
     try {
         let logDetails = await Log.find().sort({created_at: -1});
@@ -179,26 +178,34 @@ async function logAllDetails (req,res) {
 // Login method for user.
 async function login (req,res) {
     let { email, password } = req.body;
-    var action = "Login";
+    const action = "Login";
     
     // validate given inputs , check email and password. 
     try{
         if(!Validation.isValidEmail(email))
         {
-            console.log("Valid Email -- >",email);
             return res.status(400).json({errorCode:"10001",message:"Invalid email format, please try again."})
         } else if(!Validation.validatePassword(password)) {
-            console.log("Valid password -- >",password);
             return res.status(400).json({errorCode:"10002",message:"Invalid Password format, please try again"});
         }else {
-          let user = await User.findOne({email: email});
-          let user_ID = user && user._id;
+        let user = await User.findOne({email: email});
+
+        //Current date and time.
+        let date = new Date().toLocaleDateString();
+        let time = new Date().toLocaleTimeString();
+
+        //Getting UserID.
+        let user_ID = user && user._id;
           
-         let logs = await Log.create({ user_activities: [{Action: action}], UserID: user_ID});
+        await Log.create({ user_activities: [{"Action" : action, "date" : date, "time" : time}], UserID: user_ID});    
             if(user){
-                const auth = await bcrypt.compare(password, user.password);
+                //Password Authentication.
+                let auth = await bcrypt.compare(password, user.password);
+
                 if(auth) {
-                    const token = createToken(user);
+                    //Creating token.
+                    let token = createToken(user);
+
                     const result = {
                         status : "success",
                         data: {
@@ -219,29 +226,25 @@ async function login (req,res) {
         const errors = handleErrors(err);
         console.log(errors);
     }
-        // Check if email exists in db , 
-        //    then check if email and password is matching in db 
-        //              then 
-        //                  generate token 
-        //                  update for that user 
-        //                  share the user id and token in response. 
-        //              else
-        //                  send response as email and password not matching with status code as 400
-        //     else
-        //          send response as email is not resgistered, please contact admin  status code as 400
 };
 
 //Adding Dashboard
-
 async function dashboad (req,res) {
  try {
      let obj = {};
+     //Total registered user.
      let totalUserRegistered = await User.count();
+     //Registered user in 24 hrs.
      let totalUserRegisteredIn24Hr = await User.count( {"createdAt":{$gt:new Date(Date.now() - 24*60*60 * 1000)}} );
+     //Total url generated.
      let totalUrlRegistered = await ShortUrl.count();
+     //Total url generated in 24 hrs.
      let totalUrlRegisteredIn24Hr = await ShortUrl.count( {"createdAt":{$gt:new Date(Date.now() - 24*60*60 * 1000)}} );
+     //Recent 10 url generated.
      let recent10UrlGenerated = await ShortUrl.find().sort({created_at: -1}).limit(10);
+     //Recent 10 user activities.
      let recent10UserACtivities = await Log.find().sort({created_at: -1}).limit(10);
+
      obj['totalUserRegistered'] = totalUserRegistered;
      obj['totalUserRegisteredIn24Hr'] = totalUserRegisteredIn24Hr;
      obj['totalUrlRegistered'] = totalUrlRegistered;
@@ -256,21 +259,22 @@ async function dashboad (req,res) {
 }
 
 //Adding update password
-
 async function updatePassword (req, res){
     let { Password, newPassword } = req.body;
     let UserID = req.user.payload.userId;
 
     try {
             let users = await User.findOne({_id : UserID});
-            const auth = await bcrypt.compare(Password, users.password);
-            console.log("auth ---- > ",auth);
+            let auth = await bcrypt.compare(Password, users.password);
             if(auth){
                 if( Password != newPassword){
-                    const salt = await bcrypt.genSalt(5);
+                    //Salting and Hashing password.
+                    let salt = await bcrypt.genSalt(5);
                     newPassword = await bcrypt.hash(newPassword, salt);
+
+                    //Updating new password.
                     await users.updateOne({ password : newPassword});
-                    console.log("users.password --- >", users.password);
+
                     res.status(200).json({ message : "Sucessfully Changed the password"}); 
                 }else{
                     res.status(400).json({ message : "Please enter another password your new password matched with old one"});

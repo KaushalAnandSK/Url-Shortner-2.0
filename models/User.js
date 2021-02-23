@@ -1,8 +1,8 @@
 const mongoose=require('mongoose');
 const bcrypt = require('bcrypt');
-const { UserAgent } = require('express-useragent');
 const { isEmail }=require('validator');
 
+//Schema for User.
 const userSchema=new mongoose.Schema({
     fName: {  
              type : String, 
@@ -36,7 +36,7 @@ const userSchema=new mongoose.Schema({
  },{timestamps : true}
  );
 
-//Function before saved to db and adding hashing and salting to it(for password).
+//Adding hashing and salting in middleware(for password).
 userSchema.pre('save', async function (next){
     const salt = await bcrypt.genSalt(5);
     this.password = await bcrypt.hash(this.password, salt);

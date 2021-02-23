@@ -2,7 +2,6 @@ const express=require('express');
 const router =express.Router();
 const UserController = require("../Controllers/users");
 const passport =require('passport');
-const { route } = require('./shortUrl');
 const { google } = require('../config/keys');
 const User= require('../models/User');
 const paginationResults = require('../Helpers/pagination');
