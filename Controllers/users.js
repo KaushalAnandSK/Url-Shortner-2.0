@@ -241,9 +241,9 @@ async function dashboad (req,res) {
      //Total url generated in 24 hrs.
      let totalUrlRegisteredIn24Hr = await ShortUrl.count( {"createdAt":{$gt:new Date(Date.now() - 24*60*60 * 1000)}} );
      //Recent 10 url generated.
-     let recent10UrlGenerated = await ShortUrl.find().sort({created_at: -1}).limit(10);
+     let recent10UrlGenerated = await ShortUrl.find().sort({_id : -1}).limit(10);
      //Recent 10 user activities.
-     let recent10UserACtivities = await Log.find().sort({created_at: -1}).limit(10);
+     let recent10UserACtivities = await Log.find().sort({_id : -1}).limit(10);
 
      obj['totalUserRegistered'] = totalUserRegistered;
      obj['totalUserRegisteredIn24Hr'] = totalUserRegisteredIn24Hr;

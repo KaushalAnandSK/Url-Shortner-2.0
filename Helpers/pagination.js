@@ -1,4 +1,4 @@
-
+//Pagination.
  function paginationResults (model) {
     return async (req, res, next) => {
         const page = parseInt(req.query.page);
@@ -24,7 +24,7 @@
         }
 
         try {
-            results.results = await model.find().sort({created_at: -1}).limit(limit).skip(startIndex).exec();
+            results.results = await model.find().sort({_id : -1}).limit(limit).skip(startIndex).exec();
             res.paginationResults = results;
             next();  
         } catch (error) {
